@@ -35,12 +35,6 @@ FlowSupervisor = (function () {
 	self.canvas.style.margin = "0";
 	self.canvas.style.pointerEvents = "none";
 	self.context = self.canvas.getContext("2d");
-	window.addEventListener("DOMContentLoaded", function () {
-		self.canvas.width = window.innerWidth;
-		self.canvas.height = window.innerHeight;
-		self.draw();
-		document.body.appendChild(self.canvas);
-	});
 	window.addEventListener("resize", function () {
 		self.canvas.width = window.innerWidth;
 		self.canvas.height = window.innerHeight;
@@ -139,6 +133,19 @@ FlowSupervisor = (function () {
 			return self.interact.pointer.position;
 		}
 	};
+
+	// Actually initialise the canvas
+	var initialise = function () {
+		self.canvas.width = window.innerWidth;
+		self.canvas.height = window.innerHeight;
+		self.draw();
+		document.body.appendChild(self.canvas);
+	};
+	if (document.readyState === "interactive" || document.readyState === "complete") {
+		initialise();
+	} else {
+		document.addEventListener("DOMContentLoaded", initialise);
+	}
 
 	return self;
 })();
