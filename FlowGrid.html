@@ -44,12 +44,12 @@
 							context.fillStyle = "hsl(0, 0%, 25%)";
 							break;
 					}
-					context.fillRoundedRect(Math.round(position.x), Math.round(position.y), size.width, size.height, 4);
+					context.fillRoundedRectHD(Math.round(position.x), Math.round(position.y), size.width, size.height, 4);
 					context.fillStyle = "white";
 					context.textAlign = "center";
 					context.textBaseline = "middle";
-					context.font = "16pt Helvetica";
-					context.fillText(data, position.x + size.width / 2, position.y + size.height / 2);
+					context.setFontHD("Helvetica", 20);
+					context.fillTextHD(data, (position.x + size.width / 2), (position.y + size.height / 2));
 				}
 			});
 			var bagX = FlowGrid({
@@ -73,7 +73,7 @@
 				},
 				draw : function (context, size, region) {
 					context.fillStyle = "hsl(0, 0%, 10%)";
-					context.fillRect(region.origin.x, region.origin.y, region.size.width, region.size.height);
+					context.fillRectHD(region.origin.x, region.origin.y, region.size.width, region.size.height);
 				}
 			});
 			var bagY = FlowGrid({
@@ -106,7 +106,7 @@
 				},
 				draw : function (context, size, region) {
 					context.fillStyle = "hsl(0, 0%, 10%)";
-					context.fillRect(region.origin.x, region.origin.y, region.size.width, region.size.height);
+					context.fillRectHD(region.origin.x, region.origin.y, region.size.width, region.size.height);
 				}
 			});
 			window.addEventListener("DOMContentLoaded", function () {

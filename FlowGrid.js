@@ -36,8 +36,10 @@ FlowSupervisor = (function () {
 	self.canvas.style.pointerEvents = "none";
 	self.context = self.canvas.getContext("2d");
 	window.addEventListener("resize", function () {
-		self.canvas.width = window.innerWidth;
-		self.canvas.height = window.innerHeight;
+		self.canvas.width = window.devicePixelRatio * window.innerWidth;
+		self.canvas.height = window.devicePixelRatio * window.innerHeight;
+		self.canvas.style.width = window.innerWidth + "px";
+		self.canvas.style.height = window.innerHeight + "px";
 		self.draw();
 	});
 	// Layout
@@ -136,8 +138,10 @@ FlowSupervisor = (function () {
 
 	// Actually initialise the canvas
 	var initialise = function () {
-		self.canvas.width = window.innerWidth;
-		self.canvas.height = window.innerHeight;
+		self.canvas.width = window.devicePixelRatio * window.innerWidth;
+		self.canvas.height = window.devicePixelRatio * window.innerHeight;
+		self.canvas.style.width = window.innerWidth + "px";
+		self.canvas.style.height = window.innerHeight + "px";
 		self.draw();
 		document.body.appendChild(self.canvas);
 	};
@@ -175,8 +179,10 @@ FlowGrid = function (parameters) {
 	self.events = parameters.events;
 	// Set up the canvas
 	self.canvas = document.createElement("canvas");
-	self.canvas.width = self.size.width;
-	self.canvas.height = self.size.height;
+	self.canvas.width = window.devicePixelRatio * self.size.width;
+	self.canvas.height = window.devicePixelRatio * self.size.height;
+	self.canvas.style.width = self.size.width + "px";
+	self.canvas.style.height = self.size.height + "px";
 	self.context = self.canvas.getContext("2d");
 	// Layout
 	self.layout = {
@@ -265,10 +271,7 @@ FlowGrid = function (parameters) {
 			}).length, state);
 		},
 		all : function () {
-			parameters.draw(self.context, self.size, {
-				origin : { x : 0, y : 0},
-				size : self.size
-			});
+			self.draw.region({ x : 0, y : 0}, self.size);
 			self.draw.indicesFromIndex(0);
 		},
 		region : function (origin, size) {
@@ -472,7 +475,13 @@ FlowCellTemplate = function (parameters) {
 };
 
 // Useful Drawing Functions
-CanvasRenderingContext2D.prototype.fillRoundedRect = function (x, y, width, height, cornerRadius) {
+CanvasRenderingContext2D.prototype.fillRoundedRectHD = function (x, y, width, height, cornerRadius) {
+	var scale = window.devicePixelRatio;
+	x *= scale;
+	y *= scale;
+	width *= scale;
+	height *= scale;
+	cornerRadius *= scale;
 	this.beginPath();
 	for (var offset = 0; offset < 4; ++ offset) {
 		for (var angle = 0; angle <= 1; angle += 1 / 8)
@@ -482,4 +491,17 @@ CanvasRenderingContext2D.prototype.fillRoundedRect = function (x, y, width, heig
 			);
 	}
 	this.fill();
+};
+// These functions make it easier to draw sharp lines on a Retina display
+CanvasRenderingContext2D.prototype.fillRectHD = function (x, y, width, height) {
+	var scale = window.devicePixelRatio;
+	this.fillRect(x * scale, y * scale, width * scale, height * scale);
+};
+CanvasRenderingContext2D.prototype.setFontHD = function (name, size) {
+	var scale = window.devicePixelRatio;
+	this.font = size * scale + "px " + name;
+};
+CanvasRenderingContext2D.prototype.fillTextHD = function (text, x, y) {
+	var scale = window.devicePixelRatio;
+	this.fillText(text, x * scale, y * scale);
 };
