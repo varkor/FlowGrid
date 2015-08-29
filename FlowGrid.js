@@ -169,8 +169,8 @@ FlowGrid = function (parameters) {
 		y : parameters.margin.y
 	};
 	self.size = {
-		width : self.rows * self.template.size.width + (self.columns - 1) * self.spacing.x + 2 * self.margin.x,
-		height : self.columns * self.template.size.height + (self.rows - 1) * self.spacing.y + 2 * self.margin.y,
+		width : self.columns * self.template.size.width + (self.columns - 1) * self.spacing.x + 2 * self.margin.x,
+		height : self.rows * self.template.size.height + (self.rows - 1) * self.spacing.y + 2 * self.margin.y,
 	};
 	self.events = parameters.events;
 	// Set up the canvas
@@ -375,6 +375,7 @@ FlowGrid = function (parameters) {
 		}
 	});
 	self.canvas.addEventListener("mousedown", function (event) {
+		event.preventDefault();
 		var pointer = self.interact.pointer.positionGivenEvent(event);
 		var index = self.layout.cellAtPosition(pointer);
 		if (index !== null) {
