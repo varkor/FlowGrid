@@ -70,7 +70,7 @@ FlowSupervisor = (function () {
 				x : self.interact.pointer.position.x - cell.offset.x,
 				y : self.interact.pointer.position.y - cell.offset.y
 			};
-			cell.template.draw(self.context, cell.data, self.layout.confinedCellPosition(index, position), null);
+			cell.template.draw(self.context, cell.data, self.layout.confinedCellPosition(index, position), "drag");
 		}
 	};
 	// Respond to events
@@ -480,6 +480,9 @@ var item = FlowCellTemplate({
 	},
 	draw : function (context, data, position, size, state) {
 		switch (state) {
+			case "drag":
+				context.fillStyle = "hsl(0, 0%, 50%)";
+				break;
 			case "action":
 				context.fillStyle = "hsl(0, 0%, 40%)";
 				break;
