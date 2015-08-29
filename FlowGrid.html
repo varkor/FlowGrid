@@ -19,6 +19,100 @@
 		</style>
 	</head>
 	<body>
-		
+		<script>
+			// Arrays which store the actual items — these will be manipulated by the FlowGrid
+			var itemsX = ["A", "B", "C"];
+			var itemsY = ["D", "E", "F"];
+			// Bag
+			var item = FlowCellTemplate({
+				size : {
+					width : 64,
+					height : 64
+				},
+				draw : function (context, data, position, size, state) {
+					switch (state) {
+						case "drag":
+							context.fillStyle = "hsl(0, 0%, 50%)";
+							break;
+						case "action":
+							context.fillStyle = "hsl(0, 0%, 40%)";
+							break;
+						case "hover":
+							context.fillStyle = "hsl(0, 0%, 30%)";
+							break;
+						default:
+							context.fillStyle = "hsl(0, 0%, 25%)";
+							break;
+					}
+					context.fillRoundedRect(Math.round(position.x), Math.round(position.y), size.width, size.height, 4);
+					context.fillStyle = "white";
+					context.textAlign = "center";
+					context.textBaseline = "middle";
+					context.font = "16pt Helvetica";
+					context.fillText(data, position.x + size.width / 2, position.y + size.height / 2);
+				}
+			});
+			var bagX = FlowGrid({
+				template : item,
+				datasource : itemsX,
+				rows : 5,
+				columns : 5,
+				contrainToBounds : false,
+				margin : {
+					x : 8,
+					y : 8
+				},
+				spacing : {
+					x : 8,
+					y : 8
+				},
+				events : {
+					"cells:return" : function (data) {
+						console.log("cells have been returned", data);
+					}
+				},
+				draw : function (context, size, region) {
+					context.fillStyle = "hsl(0, 0%, 10%)";
+					context.fillRect(region.origin.x, region.origin.y, region.size.width, region.size.height);
+				}
+			});
+			var bagY = FlowGrid({
+				template : item,
+				datasource : itemsY,
+				rows : 5,
+				columns : 5,
+				contrainToBounds : true,
+				margin : {
+					x : 8,
+					y : 8
+				},
+				spacing : {
+					x : 8,
+					y : 8
+				},
+				events : {
+					"background:click" : function () {
+						console.log("clicked background");
+					},
+					"cell:select" : function (index) {
+						console.log("clicked cell", index);
+					},
+					"cell:drag" : function (index) {
+						console.log("started dragging cell", index);
+					},
+					"cells:drop" : function (index, data) {
+						console.log("dropped cell", index, data);
+					}
+				},
+				draw : function (context, size, region) {
+					context.fillStyle = "hsl(0, 0%, 10%)";
+					context.fillRect(region.origin.x, region.origin.y, region.size.width, region.size.height);
+				}
+			});
+			window.addEventListener("DOMContentLoaded", function () {
+				document.body.appendChild(bagX.canvas);
+				document.body.appendChild(bagY.canvas);
+			});
+		</script>
 	</body>
 </html>

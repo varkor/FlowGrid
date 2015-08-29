@@ -149,7 +149,7 @@ FlowGrid = function (parameters) {
 	var self = {};
 	// Initialise the properties
 	self.template = parameters.template;
-	self.cells = parameters.cells;
+	self.cells = parameters.datasource;
 	self.rows = parameters.rows;
 	self.columns = parameters.columns;
 	self.contrainToBounds = parameters.contrainToBounds;
@@ -415,7 +415,7 @@ FlowGrid = function (parameters) {
 						if (index === null || index < 0 || index > self.cells.length + self.layout.displacements.length) {
 							index = self.cells.length + self.layout.displacements.length;
 						}
-						self.cells = self.cells.slice(0, index).concat(data, self.cells.slice(index));
+						Array.prototype.splice.apply(self.cells, [index, 0].concat(data));
 						self.draw.indicesFromIndex(index);
 						if (self.events.hasOwnProperty("cells:drop")) {
 							self.events["cells:drop"](index, data);
@@ -427,7 +427,7 @@ FlowGrid = function (parameters) {
 	}, true);
 	// Respond to FlowSupervisor events
 	self.receiveReturnedCells = function (data) {
-		self.cells = self.cells.concat(data);
+		Array.prototype.splice.apply(self.cells, [self.cells.length, 0].concat(data));
 		for (var index = self.cells.length - data.length; index < self.cells.length; ++ index) {
 			self.draw.cell(index);
 		}
@@ -437,6 +437,13 @@ FlowGrid = function (parameters) {
 	};
 	self.getBounds = function () {
 		return self.canvas.getBoundingClientRect();
+	};
+	// Datasource delegation
+	self.refreshDataFromSource = function (source) {
+		if (arguments.length > 0) {
+			self.cells = source;
+		}
+		self.draw.all();
 	};
 	return self;
 };
@@ -456,9 +463,6 @@ FlowCellTemplate = function (parameters) {
 	return self;
 };
 
-
-
-
 // Useful Drawing Functions
 CanvasRenderingContext2D.prototype.fillRoundedRect = function (x, y, width, height, cornerRadius) {
 	this.beginPath();
@@ -471,94 +475,3 @@ CanvasRenderingContext2D.prototype.fillRoundedRect = function (x, y, width, heig
 	}
 	this.fill();
 };
-
-// Bag
-var item = FlowCellTemplate({
-	size : {
-		width : 64,
-		height : 64
-	},
-	draw : function (context, data, position, size, state) {
-		switch (state) {
-			case "drag":
-				context.fillStyle = "hsl(0, 0%, 50%)";
-				break;
-			case "action":
-				context.fillStyle = "hsl(0, 0%, 40%)";
-				break;
-			case "hover":
-				context.fillStyle = "hsl(0, 0%, 30%)";
-				break;
-			default:
-				context.fillStyle = "hsl(0, 0%, 25%)";
-				break;
-		}
-		context.fillRoundedRect(Math.round(position.x), Math.round(position.y), size.width, size.height, 4);
-		context.fillStyle = "white";
-		context.textAlign = "center";
-		context.textBaseline = "middle";
-		context.font = "16pt Helvetica";
-		context.fillText(data, position.x + size.width / 2, position.y + size.height / 2);
-	}
-});
-var bagX = FlowGrid({
-	template : item,
-	cells : ["A", "B", "C"],
-	rows : 5,
-	columns : 5,
-	contrainToBounds : false,
-	margin : {
-		x : 8,
-		y : 8
-	},
-	spacing : {
-		x : 8,
-		y : 8
-	},
-	events : {
-		"cells:return" : function (data) {
-			console.log("cells have been returned", data);
-		}
-	},
-	draw : function (context, size, region) {
-		context.fillStyle = "hsl(0, 0%, 10%)";
-		context.fillRect(region.origin.x, region.origin.y, region.size.width, region.size.height);
-	}
-});
-var bagY = FlowGrid({
-	template : item,
-	cells : ["D", "E", "F"],
-	rows : 5,
-	columns : 5,
-	contrainToBounds : true,
-	margin : {
-		x : 8,
-		y : 8
-	},
-	spacing : {
-		x : 8,
-		y : 8
-	},
-	events : {
-		"background:click" : function () {
-			console.log("clicked background");
-		},
-		"cell:select" : function (index) {
-			console.log("clicked cell", index);
-		},
-		"cell:drag" : function (index) {
-			console.log("started dragging cell", index);
-		},
-		"cells:drop" : function (index, data) {
-			console.log("dropped cell", index, data);
-		}
-	},
-	draw : function (context, size, region) {
-		context.fillStyle = "hsl(0, 0%, 10%)";
-		context.fillRect(region.origin.x, region.origin.y, region.size.width, region.size.height);
-	}
-});
-window.addEventListener("DOMContentLoaded", function () {
-	document.body.appendChild(bagX.canvas);
-	document.body.appendChild(bagY.canvas);
-});
