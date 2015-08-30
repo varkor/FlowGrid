@@ -505,3 +505,19 @@ CanvasRenderingContext2D.prototype.fillTextHD = function (text, x, y) {
 	var scale = window.devicePixelRatio;
 	this.fillText(text, x * scale, y * scale);
 };
+CanvasRenderingContext2D.prototype.moveToHD = function (x, y) {
+	var scale = window.devicePixelRatio;
+	this.moveTo(x * scale, y * scale);
+};
+CanvasRenderingContext2D.prototype.lineToHD = function (x, y, radius, startAngle, endAngle, anticlockwise) {
+	var scale = window.devicePixelRatio;
+	this.lineTo(x * scale, y * scale);
+};
+CanvasRenderingContext2D.prototype.arcHD = function (x, y, radius, startAngle, endAngle, anticlockwise) {
+	var scale = window.devicePixelRatio;
+	this.arc(x * scale, y * scale, radius * scale, startAngle, endAngle, anticlockwise);
+};
+CanvasRenderingContext2D.prototype.arcToHD = function (x1, y1, x2, y2, radius) {
+	var scale = window.devicePixelRatio;
+	this.arcTo(x1 * scale, y1 * scale, x2 * scale, y2 * scale, radius * scale);
+};
