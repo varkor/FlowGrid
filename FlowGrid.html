@@ -29,21 +29,22 @@
 					width : 64,
 					height : 64
 				},
-				draw : function (context, data, position, size, state) {
-					switch (state) {
-						case "drag":
-							context.fillStyle = "hsl(0, 0%, 50%)";
-							break;
-						case "action":
-							context.fillStyle = "hsl(0, 0%, 40%)";
-							break;
-						case "hover":
-							context.fillStyle = "hsl(0, 0%, 30%)";
-							break;
-						default:
-							context.fillStyle = "hsl(0, 0%, 25%)";
-							break;
+				draw : function (context, data, position, size, states) {
+					var lightness = 25;
+					for (var i = 0; i < states.length; ++ i) {
+						switch (states[i]) {
+							case "drag":
+								lightness += 25;
+								break;
+							case "select":
+								lightness += 15;
+								break;
+							case "hover":
+								lightness += 5;
+								break;
+						}
 					}
+					context.fillStyle = "hsl(0, 0%, " + lightness + "%)";
 					context.fillRoundedRectHD(Math.round(position.x), Math.round(position.y), size.width, size.height, 4);
 					context.fillStyle = "white";
 					context.textAlign = "center";
@@ -58,6 +59,7 @@
 				rows : 5,
 				columns : 5,
 				contrainToBounds : false,
+				selection : "multiple",
 				margin : {
 					x : 8,
 					y : 8
@@ -69,6 +71,9 @@
 				events : {
 					"cells:return" : function (data) {
 						console.log("cells have been returned", data);
+					},
+					"cells:rearrange" : function () {
+						console.log("cells have been rearranged");
 					}
 				},
 				draw : function (context, size, region) {
@@ -82,6 +87,7 @@
 				rows : 5,
 				columns : 5,
 				contrainToBounds : true,
+				selection : "none",
 				margin : {
 					x : 8,
 					y : 8
