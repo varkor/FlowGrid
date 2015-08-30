@@ -456,6 +456,13 @@ FlowGrid = function (parameters) {
 		}
 		self.draw.all();
 	};
+	self.redrawCellAtIndex = function (index) {
+		self.draw.cell(index);
+	};
+	self.redrawCell = function (cell) {
+		self.draw.cell(self.cells.indexOf(cell));
+	};
+
 	return self;
 };
 
@@ -520,4 +527,27 @@ CanvasRenderingContext2D.prototype.arcHD = function (x, y, radius, startAngle, e
 CanvasRenderingContext2D.prototype.arcToHD = function (x1, y1, x2, y2, radius) {
 	var scale = window.devicePixelRatio;
 	this.arcTo(x1 * scale, y1 * scale, x2 * scale, y2 * scale, radius * scale);
+};
+CanvasRenderingContext2D.prototype.copyImageHD = function (image, fromHD, toHD) {
+	var scale = window.devicePixelRatio;
+	var sx = 0, sy = 0, sWidth = image.width, sHeight = image.height, dx, dy, dWidth = sWidth, dHeight = sHeight;
+	if (arguments.length - 2 === 3 || arguments.length - 2 === 5) {
+		dx = arguments[3];
+		dy = arguments[4];
+	}
+	if (arguments.length - 2 === 5) {
+		dWidth = arguments[5];
+		dHeight = arguments[7];
+	}
+	if (arguments.length - 2 === 7) {
+		sx = arguments[3];
+		sy = arguments[4];
+		sWidth = arguments[5];
+		sHeight = arguments[6];
+		dx = arguments[7];
+		dy = arguments[8];
+		dWidth = arguments[9];
+		dHeight = arguments[10];
+	}
+	this.drawImage(image, sx * (fromHD ? scale : 1), sy * (fromHD ? scale : 1), sWidth * (fromHD ? scale : 1), sHeight * (fromHD ? scale : 1), dx * (toHD ? scale : 1), dy * (toHD ? scale : 1), dWidth * (toHD ? scale : 1), dHeight * (toHD ? scale : 1));
 };
