@@ -68,14 +68,7 @@
 					x : 8,
 					y : 8
 				},
-				events : {
-					"cells:return" : function (data) {
-						console.log("cells have been returned", data);
-					},
-					"cells:rearrange" : function () {
-						console.log("cells have been rearranged");
-					}
-				},
+				events : {},
 				draw : function (context, size, region) {
 					context.fillStyle = "hsl(0, 0%, 10%)";
 					context.fillRectHD(region.origin.x, region.origin.y, region.size.width, region.size.height);
@@ -96,20 +89,7 @@
 					x : 8,
 					y : 8
 				},
-				events : {
-					"background:click" : function () {
-						console.log("clicked background");
-					},
-					"cell:select" : function (index) {
-						console.log("clicked cell", index);
-					},
-					"cell:drag" : function (index) {
-						console.log("started dragging cell", index);
-					},
-					"cells:drop" : function (index, data) {
-						console.log("dropped cell", index, data);
-					}
-				},
+				events : {},
 				draw : function (context, size, region) {
 					context.fillStyle = "hsl(0, 0%, 10%)";
 					context.fillRectHD(region.origin.x, region.origin.y, region.size.width, region.size.height);
