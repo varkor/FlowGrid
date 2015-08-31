@@ -170,17 +170,41 @@ FlowGrid = function (parameters) {
 	self.contrainToBounds = parameters.contrainToBounds;
 	self.locked = [];
 	self.selection = parameters.selection;
-	self.margin = {
-		x : parameters.margin.x,
-		y : parameters.margin.y
-	};
-	self.spacing = {
-		x : parameters.margin.x,
-		y : parameters.margin.y
-	};
+	self.margin = {};
+	var properties = ["left", "right", "top", "bottom"];
+	if (typeof parameters.margin === "number") {
+		for (var i = 0; i < properties.length; ++ i) {
+			self.margin[properties[i]] = parameters.margin;
+		}
+	} else {
+		if (parameters.margin.hasOwnProperty("x")) {
+			self.margin.left = parameters.margin.x;
+			self.margin.right = parameters.margin.x;
+		}
+		if (parameters.margin.hasOwnProperty("y")) {
+			self.margin.top = parameters.margin.y;
+			self.margin.bottom = parameters.margin.y;
+		}
+		for (var i = 0; i < properties.length; ++ i) {
+			if (parameters.margin.hasOwnProperty(properties[i])) {
+				self.margin[properties[i]] = parameters.margin[properties[i]];
+			}
+		}
+	}
+	if (typeof parameters.spacing === "number") {
+		self.spacing = {
+			x : parameters.spacing,
+			y : parameters.spacing
+		};
+	} else {
+		self.spacing = {
+			x : parameters.spacing.x,
+			y : parameters.spacing.y
+		};
+	}
 	self.size = {
-		width : self.columns * self.template.size.width + (self.columns - 1) * self.spacing.x + 2 * self.margin.x,
-		height : self.rows * self.template.size.height + (self.rows - 1) * self.spacing.y + 2 * self.margin.y,
+		width : self.columns * self.template.size.width + (self.columns - 1) * self.spacing.x + self.margin.left + self.margin.right,
+		height : self.rows * self.template.size.height + (self.rows - 1) * self.spacing.y + self.margin.top + self.margin.bottom,
 	};
 	self.events = parameters.events;
 	// Set up the canvas
@@ -207,8 +231,8 @@ FlowGrid = function (parameters) {
 				overflow = false;
 			}
 			var cell = {
-				x : (position.x - self.margin.x + (overflow ? self.spacing.x / 2 : 0)) / (self.template.size.width + self.spacing.x),
-				y : (position.y - self.margin.y + (overflow ? self.spacing.y / 2 : 0)) / (self.template.size.height + self.spacing.y)
+				x : (position.x - self.margin.left + (overflow ? self.spacing.x / 2 : 0)) / (self.template.size.width + self.spacing.x),
+				y : (position.y - self.margin.top + (overflow ? self.spacing.y / 2 : 0)) / (self.template.size.height + self.spacing.y)
 			};
 			if (cell.x >= 0 && cell.x < self.columns && (overflow || (cell.x % 1 < self.template.size.width / (self.template.size.width + self.spacing.x) && cell.y % 1 < self.template.size.height / (self.template.size.height + self.spacing.y)))) {
 				return Math.floor(cell.y) * self.columns + Math.floor(cell.x);
@@ -225,8 +249,8 @@ FlowGrid = function (parameters) {
 		},
 		positionOfIndex : function (index) {
 			return {
-				x : self.margin.x + (index % self.columns) * (self.template.size.width + self.spacing.x),
-				y : self.margin.y + Math.floor(index / self.columns) * (self.template.size.height + self.spacing.y)
+				x : self.margin.left + (index % self.columns) * (self.template.size.width + self.spacing.x),
+				y : self.margin.top + Math.floor(index / self.columns) * (self.template.size.height + self.spacing.y)
 			};
 		},
 		localPositionFromFlowSupervisorPosition : function (position) {
@@ -241,7 +265,7 @@ FlowGrid = function (parameters) {
 	// Interactions
 	self.interact = {
 		pointer : {
-			down : null,
+			down : null, // Actually down on a cell
 			hover : null,
 			positionGivenEvent : function (event) {
 				var boundingRect = self.canvas.getBoundingClientRect();
@@ -315,8 +339,8 @@ FlowGrid = function (parameters) {
 				var bounds = null;
 				if (self.contrainToBounds) {
 					bounds = {
-						origin : { x : self.margin.x, y : self.margin.y },
-						size : { width : self.size.width - 2 * self.margin.x, height : self.size.height - 2 * self.margin.y }
+						origin : { x : self.margin.left, y : self.margin.top },
+						size : { width : self.size.width - (self.margin.left + self.margin.right), height : self.size.height - (self.margin.top + self.margin.bottom) }
 					};
 					var columns = self.cells.length;
 					if (columns < self.columns) {
@@ -617,6 +641,23 @@ FlowCellTemplate = function (parameters) {
 	self.draw = function (context, data, position, state) {
 		parameters.draw(context, data, position, self.size, state);
 	};
+
+	return self;
+};
+
+FlowAdjunct = function (parameters) {
+	// A FlowAdjunct is an entity that can respond to events (such as clicking, or receiving a drop). It is usually attached to a FlowGrid, but can stand alone.
+	var self = {};
+	// Initialise the properties
+	self.size = {
+		width : parameters.size.width,
+		height : parameters.size.height
+	};
+	// Create the drawing function
+	self.draw = function (context, position) {
+		parameters.draw(context, position, self.size);
+	};
+
 	return self;
 };
 
