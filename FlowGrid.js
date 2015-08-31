@@ -415,6 +415,7 @@ FlowGrid = function (parameters) {
 					index : index
 				};
 			}
+			self.broadcastEvent("cell:click", index, self.cells[index]);
 			if (self.locked.indexOf("select") === -1 && (self.selection === "single" || self.selection === "multiple")) {
 				if (self.selected.indexOf(index) === -1) {
 					if (self.selection === "single" || (self.selection === "multiple" && !event.shiftKey)) {
@@ -490,6 +491,7 @@ FlowGrid = function (parameters) {
 			"cell:drag" : null,
 			"cell:hover" : null,
 			"cell:select" : null,
+			"cell:click" : null,
 			"background:click" : null,
 			"cells:drop" : "cells:rearrange",
 			"cells:return" : "cells:rearrange",
@@ -498,8 +500,8 @@ FlowGrid = function (parameters) {
 			"grid:unlock" : null
 		};
 		var traceAncestory = function (child) {
+			ancestory.push(child);
 			if (parents[child] !== null) {
-				ancestory.push(parents[child]);
 				traceAncestory(parents[child]);
 			}
 		};
@@ -592,7 +594,7 @@ FlowGrid = function (parameters) {
 				abilities = lockable;
 			}
 			for (var i = 0; i < abilities.length; ++ i) {
-				if (self.locked.indexOf(abilities[i]) === -1) {
+				if (self.locked.indexOf(abilities[i]) !== -1) {
 					self.locked.splice(self.locked.indexOf(abilities[i]), 1);
 				}
 			}
