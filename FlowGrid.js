@@ -16,13 +16,14 @@ FlowSupervisor = (function () {
 				return self.interact.pointer.position;
 			}
 		},
-		pickUp : function (source, template, data, offset, bounds) {
+		pickUp : function (source, template, cells, offset, bounds) {
 			self.interact.pointer.dragging = true;
-			for (var i = 0; i < data.length; ++ i) {
+			for (var i = 0; i < cells.length; ++ i) {
 				self.cells.push({
 					source : source,
 					template : template,
-					data : data[i],
+					data : cells[i].data,
+					index : cells[i].index,
 					offset : offset,
 					bounds : bounds
 				});
@@ -100,7 +101,10 @@ FlowSupervisor = (function () {
 			var index = self.cells.indexOf(cell);
 			if (index > -1) {
 				supplied = supplied.concat(self.cells.splice(index, 1).map(function (cell) {
-					return cell.data;
+					return {
+						data : cell.data,
+						index : cell.index
+					};
 				}));
 			}
 		});
@@ -361,8 +365,12 @@ FlowGrid = function (parameters) {
 					return a === b ? 0 : (a < b ? -1 : 1);
 				});
 				var minimumIndex = self.selected[0];
-				for (var i = 0; i < self.selected.length; ++ i) {
-					pickedUp = pickedUp.concat(self.cells.splice(self.selected[i] - i, 1));
+				for (var i = 0, cell; i < self.selected.length; ++ i) {
+					cell = self.cells.splice(self.selected[i] - i, 1)[0];
+					pickedUp.push({
+						data : cell,
+						index : self.selected[i]
+					});
 				}
 				self.selected = [];
 				FlowSupervisor.interact.pickUp(self, self.template, pickedUp, offset, bounds);
@@ -482,7 +490,7 @@ FlowGrid = function (parameters) {
 						}
 					});
 					if (acceptable.length > 0) {
-						var data = FlowSupervisor.requestDraggedCells(self, acceptable);
+						var cells = FlowSupervisor.requestDraggedCells(self, acceptable);
 						var index = self.layout.indexAtPosition(position, true);
 						var displacement = self.layout.displacements.indexOf(index);
 						if (displacement !== -1) {
@@ -491,9 +499,12 @@ FlowGrid = function (parameters) {
 						if (index === null || index < 0 || index > self.cells.length + self.layout.displacements.length) {
 							index = self.cells.length + self.layout.displacements.length;
 						}
+						var data = cells.map(function (x) {
+							return x.data;
+						});
 						Array.prototype.splice.apply(self.cells, [index, 0].concat(data));
 						self.draw.indicesFromIndex(index);
-						self.broadcastEvent("cells:drop", index, data);
+						self.broadcastEvent("cells:drop", index, cells);
 					}
 				}
 			}
