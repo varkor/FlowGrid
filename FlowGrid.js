@@ -31,6 +31,7 @@ FlowSupervisor = (function () {
 	};
 	// Set up the canvas
 	self.canvas = document.createElement("canvas");
+	self.canvas.classList.add("flow-supervisor");
 	self.canvas.style.position = "fixed";
 	self.canvas.style.left = "0";
 	self.canvas.style.top = "0";
@@ -209,6 +210,7 @@ FlowGrid = function (parameters) {
 	self.events = parameters.events;
 	// Set up the canvas
 	self.canvas = document.createElement("canvas");
+	self.canvas.classList.add("flow-grid");
 	self.canvas.width = window.devicePixelRatio * self.size.width;
 	self.canvas.height = window.devicePixelRatio * self.size.height;
 	self.canvas.style.width = self.size.width + "px";
