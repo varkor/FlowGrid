@@ -697,6 +697,10 @@ CanvasRenderingContext2D.prototype.fillRectHD = function (x, y, width, height) {
 	var scale = window.devicePixelRatio;
 	this.fillRect(x * scale, y * scale, width * scale, height * scale);
 };
+CanvasRenderingContext2D.prototype.clearRectHD = function (x, y, width, height) {
+	var scale = window.devicePixelRatio;
+	this.clearRect(x * scale, y * scale, width * scale, height * scale);
+};
 CanvasRenderingContext2D.prototype.setFontHD = function (name, size) {
 	var scale = window.devicePixelRatio;
 	this.font = size * scale + "px " + name;
@@ -704,6 +708,10 @@ CanvasRenderingContext2D.prototype.setFontHD = function (name, size) {
 CanvasRenderingContext2D.prototype.fillTextHD = function (text, x, y) {
 	var scale = window.devicePixelRatio;
 	this.fillText(text, x * scale, y * scale);
+};
+CanvasRenderingContext2D.prototype.strokeTextHD = function (text, x, y) {
+	var scale = window.devicePixelRatio;
+	this.strokeText(text, x * scale, y * scale);
 };
 CanvasRenderingContext2D.prototype.moveToHD = function (x, y) {
 	var scale = window.devicePixelRatio;
@@ -730,7 +738,7 @@ CanvasRenderingContext2D.prototype.copyImageHD = function (image, fromHD, toHD) 
 	}
 	if (arguments.length - 2 === 5) {
 		dWidth = arguments[5];
-		dHeight = arguments[7];
+		dHeight = arguments[6];
 	}
 	if (arguments.length - 2 === 7) {
 		sx = arguments[3];
@@ -743,4 +751,14 @@ CanvasRenderingContext2D.prototype.copyImageHD = function (image, fromHD, toHD) 
 		dHeight = arguments[10];
 	}
 	this.drawImage(image, sx * (fromHD ? scale : 1), sy * (fromHD ? scale : 1), sWidth * (fromHD ? scale : 1), sHeight * (fromHD ? scale : 1), dx * (toHD ? scale : 1), dy * (toHD ? scale : 1), dWidth * (toHD ? scale : 1), dHeight * (toHD ? scale : 1));
+};
+CanvasRenderingContext2D.prototype.measureTextHD = function (text) {
+	var scale = window.devicePixelRatio;
+	return {
+		width : this.measureText(text).width / scale
+	};
+};
+CanvasRenderingContext2D.prototype.translateHD = function (x, y) {
+	var scale = window.devicePixelRatio;
+	this.translate(x * scale, y * scale);
 };
