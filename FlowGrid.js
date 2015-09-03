@@ -211,7 +211,14 @@ FlowGrid = function (parameters) {
 		width : self.columns * self.template.size.width + (self.columns - 1) * self.spacing.x + self.margin.left + self.margin.right,
 		height : self.rows * self.template.size.height + (self.rows - 1) * self.spacing.y + self.margin.top + self.margin.bottom,
 	};
-	self.events = parameters.events;
+	self.attachments = [];
+	if (parameters.hasOwnProperty("attachments")) {
+		self.attachments = parameters.attachments;
+	}
+	self.listeners = {};
+	if (parameters.hasOwnProperty("listeners")) {
+		self.listeners = parameters.listeners;
+	}
 	// Set up the canvas
 	self.canvas = document.createElement("canvas");
 	self.canvas.classList.add("flow-grid");
@@ -315,6 +322,9 @@ FlowGrid = function (parameters) {
 		},
 		all : function () {
 			self.draw.region({ x : 0, y : 0}, self.size);
+			for (var index = 0, attachment; index < self.attachments.length; ++ index) {
+				self.draw.attachment(index);
+			}
 			self.draw.indicesFromIndex(0);
 		},
 		region : function (origin, size) {
@@ -322,6 +332,10 @@ FlowGrid = function (parameters) {
 				origin : origin,
 				size : size
 			});
+		},
+		attachment : function (index) {
+			var attachment = self.attachments[index];
+			attachment.template.draw(self.context, attachment.position);
 		}
 	};
 	self.draw.all();
@@ -466,7 +480,18 @@ FlowGrid = function (parameters) {
 		} else {
 			self.selected = [];
 			redrawPreviouslySelected();
-			self.broadcastEvent("background:click", index);
+			var eventWasAbsorbed = false;
+			for (var index = 0, attachment; index < self.attachments.length; ++ index) {
+				attachment = self.attachments[index];
+				if (attachment.template.respondToEvent("click", self, attachment.position, attachment.template.size, pointer)) {
+					eventWasAbsorbed = true;
+					self.draw.attachment(index);
+					break;
+				}
+			}
+			if (!eventWasAbsorbed) {
+				self.broadcastEvent("background:click", index);
+			}
 		}
 	});
 	window.addEventListener("mouseup", function (event) {
@@ -548,11 +573,12 @@ FlowGrid = function (parameters) {
 			args.push(arguments[i]);
 		}
 		for (var i = 0; i < ancestory.length; ++ i) {
-			if (self.events.hasOwnProperty(ancestory[i])) {
-				self.events[ancestory[i]].apply(this, i === 0 ? args : []);
+			if (self.listeners.hasOwnProperty(ancestory[i])) {
+				self.listeners[ancestory[i]].apply(this, i === 0 ? args : []);
 			}
 		}
 	};
+
 	// Datasource delegation
 	self.refreshDataFromSource = function (source) {
 		if (arguments.length > 0) {
@@ -639,6 +665,18 @@ FlowGrid = function (parameters) {
 		}
 	};
 
+	// Attachments
+	self.attachAdjunct = function (adjunct, position) {
+		var index = self.attachments.push({
+			template : adjunct,
+			position : {
+				x : position.x,
+				y : position.y
+			}
+		});
+		self.draw.attachment(index - 1);
+	};
+
 	return self;
 };
 
@@ -666,12 +704,92 @@ FlowAdjunct = function (parameters) {
 		width : parameters.size.width,
 		height : parameters.size.height
 	};
+	self.data = parameters.data;
+	self.listeners = {};
+	if (parameters.hasOwnProperty("listeners")) {
+		self.listeners = parameters.listeners;
+	}
 	// Create the drawing function
 	self.draw = function (context, position) {
-		parameters.draw(context, position, self.size);
+		parameters.draw(context, self.data, position, self.size);
+	};
+
+	// Respondng to events
+	self.respondToEvent = function (event, host, position, size) {
+		// The listener should return true if it should absorb the event (so that no other listener is triggered)
+		if (self.listeners.hasOwnProperty(event)) {
+			var args = [];
+			for (var i = 4; i < arguments.length; ++ i) {
+				args.push(arguments[i]);
+			}
+			return self.listeners[event].apply(this, [self.data, host, position, size].concat(args));
+		} else {
+			return false;
+		}
 	};
 
 	return self;
+};
+
+FlowAdjunct.fromAdjuncts = function (components) {
+	var size = {
+		width : 0,
+		height : 0
+	};
+	var listeners = {};
+	for (var i = 0; i < components.length; ++ i) {
+		size.width = Math.max(size.width, components[i].position.x + components[i].adjunct.size.width);
+		size.height = Math.max(size.height, components[i].position.y + components[i].adjunct.size.height);
+		for (var event in components[i].adjunct.listeners) {
+			if (!listeners.hasOwnProperty(event)) {
+				listeners[event] = [];
+			}
+			listeners[event].push({
+				index : i,
+				listener : components[i].adjunct.listeners[event]
+			});
+		}
+	}
+	var combinedListeners = {};
+	for (var event in listeners) {
+		combinedListeners[event] = function (event) {
+			return function (data, host, position, size) {
+				var args = [];
+				for (var i = 4; i < arguments.length; ++ i) {
+					args.push(arguments[i]);
+				}
+				var eventWasAbsorbed = false;
+				for (var i = 0, component; i < listeners[event].length; ++ i) {
+					component = data.components[listeners[event][i].index];
+					var componentPosition = {
+						x : position.x + component.position.x,
+						y : position.y + component.position.y
+					};
+					if (listeners[event][i].listener.apply(this, [component.adjunct.data, host, componentPosition, component.adjunct.size].concat(args))) {
+						eventWasAbsorbed = true;
+						break;
+					}
+				}
+				return eventWasAbsorbed;
+			};
+		}(event);
+	}
+	return FlowAdjunct({
+		data : {
+			components : components
+		},
+		size : size,
+		listeners : combinedListeners,
+		draw : function (context, data, position, size) {
+			for (var i = 0, component; i < data.components.length; ++ i) {
+				component = data.components[i];
+				component.adjunct.draw(context, {
+					x : position.x + component.position.x,
+					y : position.y + component.position.y
+				});
+			}
+		}
+	});
 };
 
 // Useful Drawing Functions
