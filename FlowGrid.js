@@ -174,6 +174,7 @@ FlowGrid = function (parameters) {
 	self.selected = [];
 	self.rows = parameters.rows;
 	self.columns = parameters.columns;
+	self.scrollOffset = 0;
 	self.contrainToBounds = parameters.contrainToBounds;
 	self.locked = [];
 	self.filtered = [];
@@ -266,7 +267,7 @@ FlowGrid = function (parameters) {
 		positionOfIndex : function (index) {
 			return {
 				x : self.margin.left + (index % self.columns) * (self.template.size.width + self.spacing.x),
-				y : self.margin.top + Math.floor(index / self.columns) * (self.template.size.height + self.spacing.y)
+				y : self.margin.top + Math.floor(index / self.columns) * (self.template.size.height + self.spacing.y) - self.scrollOffset
 			};
 		},
 		localPositionFromFlowSupervisorPosition : function (position) {
@@ -274,7 +275,7 @@ FlowGrid = function (parameters) {
 			var FlowSupervisorBoundingRect = FlowSupervisor.canvas.getBoundingClientRect();
 			return {
 				x : position.x + FlowSupervisorBoundingRect.left - localBoundingRect.left,
-				y : position.y + FlowSupervisorBoundingRect.top - localBoundingRect.top
+				y : position.y + FlowSupervisorBoundingRect.top - localBoundingRect.top + self.scrollOffset
 			};
 		}
 	};
@@ -287,7 +288,7 @@ FlowGrid = function (parameters) {
 				var boundingRect = self.canvas.getBoundingClientRect();
 				return {
 					x : event.pageX - window.scrollX - boundingRect.left,
-					y : event.pageY - window.scrollY - boundingRect.top
+					y : event.pageY - window.scrollY - boundingRect.top + self.scrollOffset
 				};
 			}
 		}
@@ -351,7 +352,7 @@ FlowGrid = function (parameters) {
 		var previousDisplacements = self.layout.displacements;
 		self.layout.displacements = [];
 		var pointer = self.interact.pointer.positionGivenEvent(event);
-		if (pointer.x >= 0 && pointer.y >= 0 && pointer.x < self.size.width && pointer.y < self.size.height) {
+		if (pointer.x >= 0 && pointer.y - self.scrollOffset >= 0 && pointer.x < self.size.width && pointer.y - self.scrollOffset < self.size.height) {
 			if (self.interact.pointer.hover !== null) {
 				self.draw.cell(self.interact.pointer.hover.index);
 				self.interact.pointer.hover = null;
@@ -361,7 +362,7 @@ FlowGrid = function (parameters) {
 				var cellPosition = self.layout.positionOfCell(self.interact.pointer.down.index);
 				var offset = {
 					x : self.interact.pointer.down.pointer.x - cellPosition.x,
-					y : self.interact.pointer.down.pointer.y - cellPosition.y
+					y : self.interact.pointer.down.pointer.y - cellPosition.y - self.scrollOffset
 				};
 				var bounds = null;
 				if (self.contrainToBounds) {
@@ -548,6 +549,11 @@ FlowGrid = function (parameters) {
 			}
 		}
 	}, true);
+	self.canvas.addEventListener("wheel", function (event) {
+		var rows = Math.ceil(self.cells.length / self.columns);
+		self.scrollOffset = Math.max(0, Math.min(self.scrollOffset + event.deltaY, rows * self.template.size.height + (rows - 1) * self.spacing.y + self.margin.top + self.margin.bottom - self.size.height));
+		self.draw.all();
+	});
 	// Respond to FlowSupervisor events
 	self.receiveReturnedCells = function (data) {
 		Array.prototype.splice.apply(self.cells, [self.cells.length, 0].concat(data));
