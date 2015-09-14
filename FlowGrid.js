@@ -480,7 +480,7 @@ FlowGrid = function (parameters) {
 						}
 						self.selected.push(index);
 						self.broadcastEvent("cell:select", index);
-					} else if (self.selected.length === 1 || (self.selection === "multiple" && event.shiftKey)) {
+					} else if (self.selection === "multiple" && event.shiftKey) {
 						self.selected.splice(self.selected.indexOf(index), 1);
 					}
 					self.draw.cell(index, ["hover"]);
@@ -811,11 +811,12 @@ CanvasRenderingContext2D.prototype.fillRoundedRectHD = function (x, y, width, he
 	cornerRadius *= scale;
 	this.beginPath();
 	for (var offset = 0; offset < 4; ++ offset) {
-		for (var angle = 0; angle <= 1; angle += 1 / 8)
+		for (var angle = 0; angle <= 1; angle += 1 / 8) {
 			this.lineTo(
 				x + width / 2 + (width / 2 - cornerRadius) * Math.sign(Math.cos((offset + 0.5) * Math.PI / 2)) + cornerRadius * Math.cos((angle + offset) * Math.PI / 2),
 				y + height / 2 + (height / 2 - cornerRadius) * Math.sign(Math.sin((offset + 0.5) * Math.PI / 2)) + cornerRadius * Math.sin((angle + offset) * Math.PI / 2)
 			);
+		}
 	}
 	this.fill();
 };
