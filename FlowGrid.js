@@ -80,15 +80,17 @@ FlowSupervisor = (function () {
 		self.draw();
 	});
 	window.addEventListener("mouseup", function (event) {
-		if (self.interact.pointer.dragging) {
-			self.cells.forEach(function (cell) {
-				if (cell.source.hasOwnProperty("receiveReturnedCells")) {
-					cell.source.receiveReturnedCells([cell.data]);
-				}
-			});
-			self.cells = [];
-			FlowSupervisor.interact.pointer.dragging = false;
-			self.draw();
+		if (event.button === 0) {
+			if (self.interact.pointer.dragging) {
+				self.cells.forEach(function (cell) {
+					if (cell.source.hasOwnProperty("receiveReturnedCells")) {
+						cell.source.receiveReturnedCells([cell.data]);
+					}
+				});
+				self.cells = [];
+				FlowSupervisor.interact.pointer.dragging = false;
+				self.draw();
+			}
 		}
 	});
 	// Request methods
@@ -174,6 +176,7 @@ FlowGrid = function (parameters) {
 	self.columns = parameters.columns;
 	self.contrainToBounds = parameters.contrainToBounds;
 	self.locked = [];
+	self.filtered = [];
 	self.selection = parameters.selection;
 	self.margin = {};
 	var properties = ["left", "right", "top", "bottom"];
@@ -296,13 +299,17 @@ FlowGrid = function (parameters) {
 				var cellIndex = index - self.layout.displacements.filter(function (x) {
 					return x <= index;
 				}).length;
-				if (typeof states === "undefined") {
-					states = [];
+				if (self.filtered.indexOf(cellIndex) === -1) {
+					if (typeof states === "undefined") {
+						states = [];
+					}
+					if (self.selected.indexOf(cellIndex) !== -1) {
+						states.push("select");
+					}
+					self.template.draw(self.context, self.cells[cellIndex], self.layout.positionOfIndex(index), states);
+				} else {
+					self.draw.region(self.layout.positionOfIndex(index), self.template.size);
 				}
-				if (self.selected.indexOf(cellIndex) !== -1) {
-					states.push("select");
-				}
-				self.template.draw(self.context, self.cells[cellIndex], self.layout.positionOfIndex(index), states);
 			} else {
 				self.draw.region(self.layout.positionOfIndex(index), self.template.size);
 			}
@@ -447,89 +454,95 @@ FlowGrid = function (parameters) {
 		}
 	});
 	self.canvas.addEventListener("mousedown", function (event) {
-		event.preventDefault();
-		var pointer = self.interact.pointer.positionGivenEvent(event);
-		var index = self.layout.cellAtPosition(pointer);
-		var previouslySelected = self.selected;
-		var redrawPreviouslySelected = function () {
-			for (var i = 0; i < previouslySelected.length; ++ i) {
-				self.draw.cell(previouslySelected[i]);
-			}
-		};
-		if (index !== null) {
-			if (self.locked.indexOf("drag") === -1) {
-				self.interact.pointer.down = {
-					pointer : pointer,
-					index : index
-				};
-			}
-			self.broadcastEvent("cell:click", index, self.cells[index]);
-			if (self.locked.indexOf("select") === -1 && (self.selection === "single" || self.selection === "multiple")) {
-				if (self.selected.indexOf(index) === -1) {
-					if (self.selection === "single" || (self.selection === "multiple" && !event.shiftKey)) {
-						self.selected = [];
-						redrawPreviouslySelected();
+		if (event.button === 0) {
+			event.preventDefault();
+			var pointer = self.interact.pointer.positionGivenEvent(event);
+			var index = self.layout.cellAtPosition(pointer);
+			var previouslySelected = self.selected;
+			var redrawPreviouslySelected = function () {
+				for (var i = 0; i < previouslySelected.length; ++ i) {
+					self.draw.cell(previouslySelected[i]);
+				}
+			};
+			if (index !== null) {
+				if (self.locked.indexOf("drag") === -1) {
+					self.interact.pointer.down = {
+						pointer : pointer,
+						index : index
+					};
+				}
+				self.broadcastEvent("cell:click", index, self.cells[index]);
+				if (self.locked.indexOf("select") === -1 && (self.selection === "single" || self.selection === "multiple")) {
+					if (self.selected.indexOf(index) === -1) {
+						if (self.selection === "single" || (self.selection === "multiple" && !event.shiftKey)) {
+							self.selected = [];
+							redrawPreviouslySelected();
+						}
+						self.selected.push(index);
+						self.broadcastEvent("cell:select", index);
+					} else if (self.selected.length === 1 || (self.selection === "multiple" && event.shiftKey)) {
+						self.selected.splice(self.selected.indexOf(index), 1);
 					}
-					self.selected.push(index);
-					self.broadcastEvent("cell:select", index);
-				} else if (self.selected.length === 1 || (self.selection === "multiple" && event.shiftKey)) {
-					self.selected.splice(self.selected.indexOf(index), 1);
+					self.draw.cell(index, ["hover"]);
 				}
-				self.draw.cell(index, ["hover"]);
-			}
-		} else {
-			self.selected = [];
-			redrawPreviouslySelected();
-			var eventWasAbsorbed = false;
-			for (var index = 0, attachment; index < self.attachments.length; ++ index) {
-				attachment = self.attachments[index];
-				if (attachment.template.respondToEvent("click", self, attachment.position, attachment.template.size, pointer)) {
-					eventWasAbsorbed = true;
-					self.draw.attachment(index);
-					break;
+			} else {
+				self.selected = [];
+				redrawPreviouslySelected();
+				var eventWasAbsorbed = false;
+				for (var index = 0, attachment; index < self.attachments.length; ++ index) {
+					attachment = self.attachments[index];
+					if (pointer.x >= attachment.position.x && pointer.y >= attachment.position.y && pointer.x < attachment.position.x + attachment.template.size.width && pointer.y < attachment.position.y + attachment.template.size.height) {
+						if (attachment.template.respondToEvent("click", self, attachment.position, attachment.template.size, pointer)) {
+							eventWasAbsorbed = true;
+							self.draw.attachment(index);
+							break;
+						}
+					}
 				}
-			}
-			if (!eventWasAbsorbed) {
-				self.broadcastEvent("background:click", index);
+				if (!eventWasAbsorbed) {
+					self.broadcastEvent("background:click", index);
+				}
 			}
 		}
 	});
 	window.addEventListener("mouseup", function (event) {
-		var pointer = self.interact.pointer.positionGivenEvent(event);
-		if (self.interact.pointer.down !== null) {
-			if (pointer.x >= 0 && pointer.y >= 0 && pointer.x < self.size.width && pointer.y < self.size.height) {
-				self.draw.cell(self.interact.pointer.down.index, ["hover"]);
-				self.interact.pointer.down = null;
-			}
-		} else if (self.locked.indexOf("drop") === -1) {
-			var position = self.layout.localPositionFromFlowSupervisorPosition(FlowSupervisor.centreOfFocus(self));
-			if (position.x >= 0 && position.y >= 0 && position.x < self.size.width && position.y < self.size.height) {
-				var draggedCells = FlowSupervisor.requestDraggedCellsList(self);
-				if (draggedCells !== null) {
-					var acceptable = [];
-					draggedCells.forEach(function (cell) {
-						switch (cell.template) {
-							case self.template:
-								acceptable.push(cell);
-								break;
-						}
-					});
-					if (acceptable.length > 0) {
-						var cells = FlowSupervisor.requestDraggedCells(self, acceptable);
-						var index = self.layout.indexAtPosition(position, true);
-						var displacement = self.layout.displacements.indexOf(index);
-						if (displacement !== -1) {
-							self.layout.displacements.splice(displacement, 1);
-						}
-						if (index === null || index < 0 || index > self.cells.length + self.layout.displacements.length) {
-							index = self.cells.length + self.layout.displacements.length;
-						}
-						var data = cells.map(function (x) {
-							return x.data;
+		if (event.button === 0) {
+			var pointer = self.interact.pointer.positionGivenEvent(event);
+			if (self.interact.pointer.down !== null) {
+				if (pointer.x >= 0 && pointer.y >= 0 && pointer.x < self.size.width && pointer.y < self.size.height) {
+					self.draw.cell(self.interact.pointer.down.index, ["hover"]);
+					self.interact.pointer.down = null;
+				}
+			} else if (self.locked.indexOf("drop") === -1) {
+				var position = self.layout.localPositionFromFlowSupervisorPosition(FlowSupervisor.centreOfFocus(self));
+				if (position.x >= 0 && position.y >= 0 && position.x < self.size.width && position.y < self.size.height) {
+					var draggedCells = FlowSupervisor.requestDraggedCellsList(self);
+					if (draggedCells !== null) {
+						var acceptable = [];
+						draggedCells.forEach(function (cell) {
+							switch (cell.template) {
+								case self.template:
+									acceptable.push(cell);
+									break;
+							}
 						});
-						Array.prototype.splice.apply(self.cells, [index, 0].concat(data));
-						self.draw.indicesFromIndex(index);
-						self.broadcastEvent("cells:drop", index, cells);
+						if (acceptable.length > 0) {
+							var cells = FlowSupervisor.requestDraggedCells(self, acceptable);
+							var index = self.layout.indexAtPosition(position, true);
+							var displacement = self.layout.displacements.indexOf(index);
+							if (displacement !== -1) {
+								self.layout.displacements.splice(displacement, 1);
+							}
+							if (index === null || index < 0 || index > self.cells.length + self.layout.displacements.length) {
+								index = self.cells.length + self.layout.displacements.length;
+							}
+							var data = cells.map(function (x) {
+								return x.data;
+							});
+							Array.prototype.splice.apply(self.cells, [index, 0].concat(data));
+							self.draw.indicesFromIndex(index);
+							self.broadcastEvent("cells:drop", index, cells);
+						}
 					}
 				}
 			}
@@ -664,17 +677,36 @@ FlowGrid = function (parameters) {
 			self.broadcastEvent("grid:unlock");
 		}
 	};
+	self.filter = function (predicate) {
+		self.filtered = [];
+		var minimumIndex = null;
+		for (var index = 0; index < self.cells.length; ++ index) {
+			if (!predicate(self.cells[index], index)) {
+				self.filtered.push(index);
+			} else if (minimumIndex === null) {
+				minimumIndex = index;
+			}
+		}
+		if (self.filtered.length > 0) {
+			self.draw.indicesFromIndex(minimumIndex, self.filtered.length);
+		}
+	};
 
 	// Attachments
+	self.attachAdjuncts = function (adjuncts) {
+		for (var i = 0, adjunct, position; i < adjuncts.length; ++ i) {
+			var index = self.attachments.push({
+				template : adjuncts[i].adjunct,
+				position : {
+					x : adjuncts[i].position.x,
+					y : adjuncts[i].position.y
+				}
+			});
+			self.draw.attachment(index - 1);
+		}
+	};
 	self.attachAdjunct = function (adjunct, position) {
-		var index = self.attachments.push({
-			template : adjunct,
-			position : {
-				x : position.x,
-				y : position.y
-			}
-		});
-		self.draw.attachment(index - 1);
+		return self.attachAdjuncts([adjunct, position]);
 	};
 
 	return self;
@@ -731,65 +763,42 @@ FlowAdjunct = function (parameters) {
 	return self;
 };
 
-FlowAdjunct.fromAdjuncts = function (components) {
-	var size = {
-		width : 0,
-		height : 0
-	};
-	var listeners = {};
-	for (var i = 0; i < components.length; ++ i) {
-		size.width = Math.max(size.width, components[i].position.x + components[i].adjunct.size.width);
-		size.height = Math.max(size.height, components[i].position.y + components[i].adjunct.size.height);
-		for (var event in components[i].adjunct.listeners) {
-			if (!listeners.hasOwnProperty(event)) {
-				listeners[event] = [];
+FlowAdjunct.createRowFromTemplate = function (parameters, template, data) {
+	var adjuncts = [];
+	for (var index = 0, adjunct, width = 0; index < parameters.columns; ++ index) {
+		adjunct = {
+			size : {
+				width : template.size.width,
+				height : template.size.height
+			},
+			data : {
+				index : index,
+				defaults : parameters.data
 			}
-			listeners[event].push({
-				index : i,
-				listener : components[i].adjunct.listeners[event]
-			});
+		};
+		if (parameters.adjunct.hasOwnProperty("listeners")) {
+			adjunct.listeners = parameters.adjuncts.listeners;
 		}
-	}
-	var combinedListeners = {};
-	for (var event in listeners) {
-		combinedListeners[event] = function (event) {
-			return function (data, host, position, size) {
-				var args = [];
-				for (var i = 4; i < arguments.length; ++ i) {
-					args.push(arguments[i]);
-				}
-				var eventWasAbsorbed = false;
-				for (var i = 0, component; i < listeners[event].length; ++ i) {
-					component = data.components[listeners[event][i].index];
-					var componentPosition = {
-						x : position.x + component.position.x,
-						y : position.y + component.position.y
-					};
-					if (listeners[event][i].listener.apply(this, [component.adjunct.data, host, componentPosition, component.adjunct.size].concat(args))) {
-						eventWasAbsorbed = true;
-						break;
-					}
-				}
-				return eventWasAbsorbed;
-			};
-		}(event);
-	}
-	return FlowAdjunct({
-		data : {
-			components : components
-		},
-		size : size,
-		listeners : combinedListeners,
-		draw : function (context, data, position, size) {
-			for (var i = 0, component; i < data.components.length; ++ i) {
-				component = data.components[i];
-				component.adjunct.draw(context, {
-					x : position.x + component.position.x,
-					y : position.y + component.position.y
-				});
+		if (typeof data !== "undefined") {
+			adjunct.data.individual = data[index];
+		} else {
+			adjunct.data.individual = {};
+		}
+		for (var property in parameters.adjunct.data) {
+			if (!adjunct.data.individual.hasOwnProperty(property)) {
+				adjunct.data.individual[property] = parameters.adjunct.data[property];
 			}
 		}
-	});
+		adjuncts.push({
+			adjunct : FlowAdjunct(adjunct),
+			position : {
+				x : parameters.position.x + width,
+				y : parameters.position.y
+			}
+		});
+		width += parameters.adjunct.size.width;
+	}
+	return adjuncts;
 };
 
 // Useful Drawing Functions
