@@ -905,3 +905,7 @@ CanvasRenderingContext2D.prototype.translateHD = function (x, y) {
 	var scale = window.devicePixelRatio;
 	this.translate(x * scale, y * scale);
 };
+CanvasRenderingContext2D.prototype.quadraticCurveToHD = function (cpx, cpy, x, y) {
+	var scale = window.devicePixelRatio;
+	this.quadraticCurveTo(cpx * scale, cpy * scale, x * scale, y * scale);
+};
