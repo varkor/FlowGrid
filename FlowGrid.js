@@ -4,6 +4,7 @@ FlowSupervisor = (function () {
 	self.cells = [];
 	// Interaction
 	self.interact = {
+		selection : null,
 		pointer : {
 			dragging : false,
 			position : { x : 0, y : 0},
@@ -17,7 +18,6 @@ FlowSupervisor = (function () {
 			}
 		},
 		pickUp : function (source, template, cells, offset, bounds) {
-			self.interact.pointer.dragging = true;
 			for (var i = 0; i < cells.length; ++ i) {
 				self.cells.push({
 					source : source,
@@ -64,6 +64,13 @@ FlowSupervisor = (function () {
 	// Create the drawing function
 	self.draw = function () {
 		self.context.clearRect(0, 0, self.canvas.width, self.canvas.height);
+		if (self.isSelecting()) {
+			var selection = self.requestSelection();
+			if (selection.size.width > 0 && selection.size.height > 0) {
+				self.context.fillStyle = "hsla(0, 0%, 100%, 0.6)";
+				self.context.fillRectHD(selection.position.x, selection.position.y, selection.size.width, selection.size.height);
+			}
+		}
 		for (var index = self.cells.length - 1; index >= 0; -- index) {
 			var cell = self.cells[index];
 			var multipleDragOffset = 8 * Math.min(index, 2);
@@ -77,18 +84,32 @@ FlowSupervisor = (function () {
 	// Respond to events
 	window.addEventListener("mousemove", function (event) {
 		self.interact.pointer.updatePositionGivenEvent(event);
+		if (self.isSelecting()) {
+			var bounds = self.interact.selection.source.canvas.getBoundingClientRect();
+			self.interact.selection.end = {
+				x : Math.round(Math.max(bounds.left, Math.min(self.interact.pointer.position.x, bounds.right))),
+				y : Math.round(Math.max(bounds.top, Math.min(self.interact.pointer.position.y, bounds.bottom)))
+			};
+		}
 		self.draw();
-	});
+	}, true);
 	window.addEventListener("mouseup", function (event) {
 		if (event.button === 0) {
-			if (self.interact.pointer.dragging) {
+			var redraw = false;
+			if (self.isDragging()) {
 				self.cells.forEach(function (cell) {
 					if (cell.source.hasOwnProperty("receiveReturnedCells")) {
 						cell.source.receiveReturnedCells([cell.data]);
 					}
 				});
 				self.cells = [];
-				FlowSupervisor.interact.pointer.dragging = false;
+				redraw = true;
+			}
+			if (self.isSelecting()) {
+				self.interact.selection = null;
+				redraw = true;
+			}
+			if (redraw) {
 				self.draw();
 			}
 		}
@@ -110,16 +131,33 @@ FlowSupervisor = (function () {
 				}));
 			}
 		});
-		if (self.cells.length === 0) {
-			FlowSupervisor.interact.pointer.dragging = false;
-		}
 		if (supplied.length > 0) {
 			self.draw();
 		}
 		return supplied;
 	};
+	self.requestSelection = function (source, belongingToSource) {
+		if (typeof belongingToSource !== "undefined") {
+			if (self.interact.selection.source !== belongingToSource) {
+				return null;
+			}
+		}
+		return {
+			position : {
+				x : Math.min(self.interact.selection.start.x, self.interact.selection.end.x),
+				y : Math.min(self.interact.selection.start.y, self.interact.selection.end.y)
+			},
+			size : {
+				width : Math.abs(self.interact.selection.end.x - self.interact.selection.start.x),
+				height : Math.abs(self.interact.selection.end.y - self.interact.selection.start.y)
+			}
+		};
+	};
 	self.isDragging = function (source) {
-		return self.interact.pointer.dragging > 0;
+		return self.cells.length > 0;
+	};
+	self.isSelecting = function (source) {
+		return self.interact.selection !== null;
 	};
 	self.draggedCellsAreMonotemplate = function (source, template) {
 		if (arguments.length >= 2 && self.cells.length > 0 && self.cells[0].template !== template)
@@ -144,6 +182,13 @@ FlowSupervisor = (function () {
 		} else {
 			return self.interact.pointer.position;
 		}
+	};
+	self.startSelectionForGrid = function (source) {
+		self.interact.selection = {
+			start : self.interact.pointer.position,
+			end : self.interact.pointer.position,
+			source : source
+		};
 	};
 
 	// Actually initialise the canvas
@@ -349,98 +394,122 @@ FlowGrid = function (parameters) {
 	self.draw.all();
 	// Respond to events
 	window.addEventListener("mousemove", function (event) {
-		var previousDisplacements = self.layout.displacements;
-		self.layout.displacements = [];
-		var pointer = self.interact.pointer.positionGivenEvent(event);
-		if (pointer.x >= 0 && pointer.y - self.scrollOffset >= 0 && pointer.x < self.size.width && pointer.y - self.scrollOffset < self.size.height) {
-			if (self.interact.pointer.hover !== null) {
-				self.draw.cell(self.interact.pointer.hover.index);
-				self.interact.pointer.hover = null;
-			}
-			if (self.interact.pointer.down !== null) {
-				// Initiate a drag event
-				var cellPosition = self.layout.positionOfCell(self.interact.pointer.down.index);
-				var offset = {
-					x : self.interact.pointer.down.pointer.x - cellPosition.x,
-					y : self.interact.pointer.down.pointer.y - cellPosition.y - self.scrollOffset
-				};
-				var bounds = null;
-				if (self.contrainToBounds) {
-					bounds = {
-						origin : { x : self.margin.left, y : self.margin.top },
-						size : { width : self.size.width - (self.margin.left + self.margin.right), height : self.size.height - (self.margin.top + self.margin.bottom) }
+		if (!FlowSupervisor.isSelecting()) {
+			var previousDisplacements = self.layout.displacements;
+			self.layout.displacements = [];
+			var pointer = self.interact.pointer.positionGivenEvent(event);
+			if (pointer.x >= 0 && pointer.y - self.scrollOffset >= 0 && pointer.x < self.size.width && pointer.y - self.scrollOffset < self.size.height) {
+				if (self.interact.pointer.hover !== null) {
+					self.draw.cell(self.interact.pointer.hover.index);
+					self.interact.pointer.hover = null;
+				}
+				if (self.interact.pointer.down !== null) {
+					// Initiate a drag event
+					var cellPosition = self.layout.positionOfCell(self.interact.pointer.down.index);
+					var offset = {
+						x : self.interact.pointer.down.pointer.x - cellPosition.x,
+						y : self.interact.pointer.down.pointer.y - cellPosition.y - self.scrollOffset
 					};
-					var columns = self.cells.length;
-					if (columns < self.columns) {
-						bounds.size.width = columns * self.template.size.width + (columns - 1) * self.spacing.x;
+					var bounds = null;
+					if (self.contrainToBounds) {
+						bounds = {
+							origin : { x : self.margin.left, y : self.margin.top },
+							size : { width : self.size.width - (self.margin.left + self.margin.right), height : self.size.height - (self.margin.top + self.margin.bottom) }
+						};
+						var columns = self.cells.length;
+						if (columns < self.columns) {
+							bounds.size.width = columns * self.template.size.width + (columns - 1) * self.spacing.x;
+						}
+						var rows = Math.ceil(self.cells.length / self.columns);
+						if (rows < self.rows) {
+							bounds.size.height = rows * self.template.size.height + (rows - 1) * self.spacing.y;
+						}
 					}
-					var rows = Math.ceil(self.cells.length / self.columns);
-					if (rows < self.rows) {
-						bounds.size.height = rows * self.template.size.height + (rows - 1) * self.spacing.y;
+					var pickedUp = [];
+					if (self.selection === "none") {
+						self.selected.push(self.interact.pointer.down.index);
 					}
-				}
-				var pickedUp = [];
-				if (self.selection === "none") {
-					self.selected.push(self.interact.pointer.down.index);
-				}
-				self.selected.sort(function (a, b) {
-					return a === b ? 0 : (a < b ? -1 : 1);
-				});
-				var minimumIndex = self.selected[0];
-				for (var i = 0, cell; i < self.selected.length; ++ i) {
-					cell = self.cells.splice(self.selected[i] - i, 1)[0];
-					pickedUp.push({
-						data : cell,
-						index : self.selected[i]
+					self.selected.sort(function (a, b) {
+						return a === b ? 0 : (a < b ? -1 : 1);
 					});
+					var minimumIndex = self.selected[0];
+					for (var i = 0, cell; i < self.selected.length; ++ i) {
+						cell = self.cells.splice(self.selected[i] - i, 1)[0];
+						pickedUp.push({
+							data : cell,
+							index : self.selected[i]
+						});
+					}
+					self.selected = [];
+					FlowSupervisor.interact.pickUp(self, self.template, pickedUp, offset, bounds);
+					self.broadcastEvent("cell:drag", self.interact.pointer.down.index);
+					var index = self.interact.pointer.down.index + self.layout.displacements.filter(function (x) {
+						return x <= index;
+					});
+					if (index < self.cells.length + self.layout.displacements.length) {
+						self.layout.displacements.push(self.interact.pointer.down.index);
+					}
+					self.draw.indicesFromIndex(minimumIndex, pickedUp.length);
+					self.interact.pointer.down = null;
+				} else if (!FlowSupervisor.isDragging(self) && self.locked.indexOf("hover") === -1) {
+					var index = self.layout.cellAtPosition(pointer);
+					if (index !== null) {
+						self.interact.pointer.hover = {
+							index : index
+						};
+						self.draw.cell(index, ["hover"]);
+						self.broadcastEvent("cell:hover", index);
+					}
 				}
+			}
+			if (FlowSupervisor.isDragging(self) && FlowSupervisor.draggedCellsAreMonotemplate(self, self.template) && self.locked.indexOf("drop") === -1) {
+				// Make room for the dragged cells
+				var position = self.layout.localPositionFromFlowSupervisorPosition(FlowSupervisor.centreOfFocus(self));
+				var index = self.layout.cellAtPosition(position, true);
+				if (index !== null && index >= 0 && index < self.cells.length + self.layout.displacements.length) {
+					self.layout.displacements.push(index);
+					self.draw.indicesFromIndex(index, 1);
+				}
+			}
+			var displacementHasChanged = self.layout.displacements.length !== previousDisplacements.length;
+			var displacementPrevious = previousDisplacements.slice(0).sort(function (a, b) {
+				return a === b ? 0 : (a < b ? -1 : 1);
+			}), displacementNext = self.layout.displacements.slice(0).sort(function (a, b) {
+				return a === b ? 0 : (a < b ? -1 : 1);
+			});
+			if (!displacementHasChanged) {
+				for (var index = 0; index < displacementPrevious.length; ++ index) {
+					if (displacementPrevious[index] !== displacementNext[index]) {
+						displacementHasChanged = true;
+						break;
+					}
+				}
+			}
+			if (displacementHasChanged) {
+				self.draw.indicesFromIndex(displacementPrevious.length === 0 ? displacementNext[0] : (displacementNext.length === 0 ? displacementPrevious[0] : Math.min(displacementPrevious[0], displacementNext[0])), 1);
+			}
+		} else {
+			// Respond to selection rectangle
+			var selection = FlowSupervisor.requestSelection(self, self);
+			if (selection !== null) {
+				// Clear the previous selection
+				var previouslySelected = self.selected.slice();
 				self.selected = [];
-				FlowSupervisor.interact.pickUp(self, self.template, pickedUp, offset, bounds);
-				self.broadcastEvent("cell:drag", self.interact.pointer.down.index);
-				var index = self.interact.pointer.down.index + self.layout.displacements.filter(function (x) {
-					return x <= index;
-				});
-				if (index < self.cells.length + self.layout.displacements.length) {
-					self.layout.displacements.push(self.interact.pointer.down.index);
+				for (var i = 0; i < previouslySelected.length; ++ i) {
+					self.draw.cell(previouslySelected[i]);
 				}
-				self.draw.indicesFromIndex(minimumIndex, pickedUp.length);
-				self.interact.pointer.down = null;
-			} else if (!FlowSupervisor.isDragging(self) && self.locked.indexOf("hover") === -1) {
-				var index = self.layout.cellAtPosition(pointer);
-				if (index !== null) {
-					self.interact.pointer.hover = {
-						index : index
-					};
-					self.draw.cell(index, ["hover"]);
-					self.broadcastEvent("cell:hover", index);
+				// Form the new selection
+				var position = self.layout.localPositionFromFlowSupervisorPosition(selection.position), size = selection.size;
+				var left = (position.x - self.margin.left) / (self.template.size.width + self.spacing.x), top = (position.y - self.margin.top) / (self.template.size.height + self.spacing.y), right = (position.x + size.width - 1 - self.margin.left) / (self.template.size.width + self.spacing.x), bottom = (position.y + size.height - 1 - self.margin.top) / (self.template.size.height + self.spacing.y);
+				// We can always round left and top up because we're making the assumption that a drag always starts from a point in between cells, and cells are always top-left aligned
+				for (var x = Math.floor(left) + (left % 1 >= (self.template.size.width / (self.template.size.width + self.spacing.x)) ? 1 : 0); x < Math.min(self.cells.length, self.columns, Math.ceil(right)); ++ x) {
+					for (var y = Math.floor(top) + (top % 1 >= (self.template.size.height / (self.template.size.height + self.spacing.y)) ? 1 : 0); y < Math.min(Math.ceil(self.cells.length / self.columns), Math.ceil(bottom)); ++ y) {
+						var index = y * self.columns + x;
+						self.selected.push(index);
+						self.draw.cell(index);
+					}
 				}
 			}
-		}
-		if (FlowSupervisor.isDragging(self) && FlowSupervisor.draggedCellsAreMonotemplate(self, self.template) && self.locked.indexOf("drop") === -1) {
-			// Make room for the dragged cells
-			var position = self.layout.localPositionFromFlowSupervisorPosition(FlowSupervisor.centreOfFocus(self));
-			var index = self.layout.cellAtPosition(position, true);
-			if (index !== null && index >= 0 && index < self.cells.length + self.layout.displacements.length) {
-				self.layout.displacements.push(index);
-				self.draw.indicesFromIndex(index, 1);
-			}
-		}
-		var displacementHasChanged = self.layout.displacements.length !== previousDisplacements.length;
-		var displacementPrevious = previousDisplacements.slice(0).sort(function (a, b) {
-			return a === b ? 0 : (a < b ? -1 : 1);
-		}), displacementNext = self.layout.displacements.slice(0).sort(function (a, b) {
-			return a === b ? 0 : (a < b ? -1 : 1);
-		});
-		if (!displacementHasChanged) {
-			for (var index = 0; index < displacementPrevious.length; ++ index) {
-				if (displacementPrevious[index] !== displacementNext[index]) {
-					displacementHasChanged = true;
-					break;
-				}
-			}
-		}
-		if (displacementHasChanged) {
-			self.draw.indicesFromIndex(displacementPrevious.length === 0 ? displacementNext[0] : (displacementNext.length === 0 ? displacementPrevious[0] : Math.min(displacementPrevious[0], displacementNext[0])), 1);
 		}
 	}, true);
 	self.canvas.addEventListener("mouseleave", function (event) {
@@ -502,6 +571,9 @@ FlowGrid = function (parameters) {
 				}
 				if (!eventWasAbsorbed) {
 					self.broadcastEvent("background:click", index);
+					if (self.selection === "multiple") {
+						FlowSupervisor.startSelectionForGrid(self);
+					}
 				}
 			}
 		}
