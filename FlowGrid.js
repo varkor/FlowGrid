@@ -506,6 +506,14 @@ FlowGrid = function (parameters) {
 			}
 		}
 	});
+	self.canvas.addEventListener("contextmenu", function (event) {
+		event.preventDefault();
+		var pointer = self.interact.pointer.positionGivenEvent(event);
+		var index = self.layout.cellAtPosition(pointer);
+		if (index !== null) {
+			self.broadcastEvent("cell:contextmenu", index, self.cells[index], event);
+		}
+	});
 	window.addEventListener("mouseup", function (event) {
 		if (event.button === 0) {
 			var pointer = self.interact.pointer.positionGivenEvent(event);
@@ -573,6 +581,7 @@ FlowGrid = function (parameters) {
 			"cell:hover" : null,
 			"cell:select" : null,
 			"cell:click" : null,
+			"cell:contextmenu" : null,
 			"background:click" : null,
 			"cells:drop" : "cells:rearrange",
 			"cells:return" : "cells:rearrange",
