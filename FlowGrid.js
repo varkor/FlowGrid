@@ -91,8 +91,10 @@ FlowSupervisor = (function () {
 				y : Math.round(Math.max(bounds.top, Math.min(self.interact.pointer.position.y, bounds.bottom)))
 			};
 		}
-		self.draw();
 	}, true);
+	window.addEventListener("mousemove", function (event) {
+		self.draw();
+	});
 	window.addEventListener("mouseup", function (event) {
 		if (event.button === 0) {
 			var redraw = false;
