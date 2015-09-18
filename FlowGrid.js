@@ -139,6 +139,9 @@ FlowSupervisor = (function () {
 		return supplied;
 	};
 	self.requestSelection = function (source, belongingToSource) {
+		if (!self.isSelecting()) {
+			return null;
+		}
 		if (typeof belongingToSource !== "undefined") {
 			if (self.interact.selection.source !== belongingToSource) {
 				return null;
@@ -191,6 +194,14 @@ FlowSupervisor = (function () {
 			end : self.interact.pointer.position,
 			source : source
 		};
+	};
+	self.endSelectionForGrid = function (source) {
+		if (self.isSelecting() && self.interact.selection.source === source) {
+			self.interact.selection = null;
+			self.draw();
+			return true;
+		}
+		return false;
 	};
 
 	// Actually initialise the canvas
@@ -558,8 +569,10 @@ FlowGrid = function (parameters) {
 					self.draw.cell(index, ["hover"]);
 				}
 			} else {
-				self.selected = [];
-				redrawPreviouslySelected();
+				if (self.locked.indexOf("select") === -1) {
+					self.selected = [];
+					redrawPreviouslySelected();
+				}
 				var eventWasAbsorbed = false;
 				for (var index = 0, attachment; index < self.attachments.length; ++ index) {
 					attachment = self.attachments[index];
@@ -573,7 +586,7 @@ FlowGrid = function (parameters) {
 				}
 				if (!eventWasAbsorbed) {
 					self.broadcastEvent("background:click", index);
-					if (self.selection === "multiple") {
+					if (self.locked.indexOf("select") === -1 && self.selection === "multiple") {
 						FlowSupervisor.startSelectionForGrid(self);
 					}
 				}
@@ -716,6 +729,9 @@ FlowGrid = function (parameters) {
 					self.draw.cell(self.interact.pointer.down.index);
 					self.interact.pointer.down = null;
 				}
+				if (FlowSupervisor.requestSelection(self, self) !== null) {
+					FlowSupervisor.endSelectionForGrid(self);
+				}
 			}
 			if (abilities.indexOf("drag") !== -1) {
 				var draggedCells = FlowSupervisor.requestDraggedCellsList(self);
@@ -727,7 +743,7 @@ FlowGrid = function (parameters) {
 						}
 					});
 					if (acceptable.length > 0) {
-						var data = FlowSupervisor.requestDraggedCells(self, acceptable);
+						var cells = FlowSupervisor.requestDraggedCells(self, acceptable);
 						var minimumIndex = self.cells.length;
 						if (self.layout.displacements.length > 0) {
 							self.layout.displacements.sort(function (a, b) {
@@ -738,6 +754,9 @@ FlowGrid = function (parameters) {
 							}
 						}
 						self.layout.displacements = [];
+						var data = cells.map(function (x) {
+							return x.data;
+						});
 						Array.prototype.splice.apply(self.cells, [self.cells.length, 0].concat(data));
 						self.draw.indicesFromIndex(minimumIndex);
 					}
