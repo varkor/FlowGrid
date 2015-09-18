@@ -506,11 +506,7 @@ FlowGrid = function (parameters) {
 			var selection = FlowSupervisor.requestSelection(self, self);
 			if (selection !== null) {
 				// Clear the previous selection
-				var previouslySelected = self.selected.slice();
-				self.selected = [];
-				for (var i = 0; i < previouslySelected.length; ++ i) {
-					self.draw.cell(previouslySelected[i]);
-				}
+				self.deselectAll();
 				// Form the new selection
 				var position = self.layout.localPositionFromFlowSupervisorPosition(selection.position), size = selection.size;
 				var left = (position.x - self.margin.left) / (self.template.size.width + self.spacing.x), top = (position.y - self.margin.top) / (self.template.size.height + self.spacing.y), right = (position.x + size.width - 1 - self.margin.left) / (self.template.size.width + self.spacing.x), bottom = (position.y + size.height - 1 - self.margin.top) / (self.template.size.height + self.spacing.y);
@@ -783,6 +779,13 @@ FlowGrid = function (parameters) {
 				}
 			}
 			self.broadcastEvent("grid:unlock");
+		}
+	};
+	self.deselectAll = function () {
+		var previouslySelected = self.selected.slice();
+		self.selected = [];
+		for (var i = 0; i < previouslySelected.length; ++ i) {
+			self.draw.cell(previouslySelected[i]);
 		}
 	};
 	self.filter = function (predicate) {
