@@ -21,14 +21,15 @@
 	<body>
 		<script>
 			// Arrays which store the actual items — these will be manipulated by the FlowGrid
-			var itemsX = ["A", "B", "C"];
-			var itemsY = ["D", "E", "F"];
+			var itemsX = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
+			var itemsY = ["a", "b", "c"];
 			// Bag
 			var item = FlowCellTemplate({
 				size : {
 					width : 64,
 					height : 64
 				},
+				interacts : [],
 				draw : function (context, data, position, size, states) {
 					var lightness = 25;
 					for (var i = 0; i < states.length; ++ i) {
@@ -37,6 +38,7 @@
 								lightness += 25;
 								break;
 							case "select":
+							case "interact":
 								lightness += 15;
 								break;
 							case "hover":
