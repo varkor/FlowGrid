@@ -479,8 +479,8 @@ FlowGrid = function (parameters) {
 						}
 						if (previouslySelected) {
 							self.selected.splice(self.selected.indexOf(self.interact.pointer.down.index), 1);
-							self.draw.cell(self.interact.pointer.down.index, ["hover"]);
 						}
+						self.draw.cell(self.interact.pointer.down.index, ["hover"]);
 					}
 					self.interact.pointer.down = null;
 				} else if (self.locked.indexOf("hover") === -1) {
