@@ -541,7 +541,7 @@ FlowGrid = function (parameters) {
 				self.deselectAll();
 				// Form the new selection
 				var position = self.layout.localPositionFromFlowSupervisorPosition(selection.position), size = selection.size;
-				var left = (position.x - self.margin.left) / (self.template.size.width + self.spacing.x), top = (position.y - self.margin.top) / (self.template.size.height + self.spacing.y), right = (position.x + size.width - 1 - self.margin.left) / (self.template.size.width + self.spacing.x), bottom = (position.y + size.height - 1 - self.margin.top) / (self.template.size.height + self.spacing.y);
+				var left = Math.max(0, (position.x - self.margin.left) / (self.template.size.width + self.spacing.x)), top = Math.max(0, (position.y - self.margin.top) / (self.template.size.height + self.spacing.y)), right = (position.x + size.width - 1 - self.margin.left) / (self.template.size.width + self.spacing.x), bottom = (position.y + size.height - 1 - self.margin.top) / (self.template.size.height + self.spacing.y);
 				// We can always round left and top up because we're making the assumption that a drag always starts from a point in between cells, and cells are always top-left aligned
 				for (var x = Math.floor(left) + (left % 1 >= (self.template.size.width / (self.template.size.width + self.spacing.x)) ? 1 : 0); x < Math.min(self.cells.length, self.columns, Math.ceil(right)); ++ x) {
 					for (var y = Math.floor(top) + (top % 1 >= (self.template.size.height / (self.template.size.height + self.spacing.y)) ? 1 : 0); y < Math.min(Math.ceil(self.cells.length / self.columns), Math.ceil(bottom)); ++ y) {
