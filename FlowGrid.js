@@ -630,7 +630,7 @@ FlowGrid = function (parameters) {
 		if (event.button === 0) {
 			var pointer = self.interact.pointer.positionGivenEvent(event);
 			if (self.interact.pointer.down !== null) {
-				if (pointer.x >= 0 && pointer.y >= 0 && pointer.x < self.size.width && pointer.y < self.size.height) {
+				if (pointer.x >= 0 && pointer.y - self.scrollOffset >= 0 && pointer.x < self.size.width && pointer.y - self.scrollOffset < self.size.height) {
 					var index = self.interact.pointer.down.index;
 					self.interact.pointer.down = null;
 					if (self.layout.cellAtPosition(pointer) === index) {
