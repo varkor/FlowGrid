@@ -915,23 +915,6 @@ const FlowGrid = function (parameters) {
 		}
 	};
 
-	// Attachments
-	self.attachAdjuncts = function (adjuncts) {
-		for (let i = 0, adjunct, position; i < adjuncts.length; ++ i) {
-			let index = self.attachments.push({
-				template: adjuncts[i].adjunct,
-				position: {
-					x: adjuncts[i].position.x,
-					y: adjuncts[i].position.y
-				}
-			});
-			self.draw.attachment(index - 1);
-		}
-	};
-	self.attachAdjunct = function (adjunct, position) {
-		return self.attachAdjuncts([adjunct, position]);
-	};
-
 	return self;
 };
 
@@ -950,79 +933,6 @@ const FlowCellTemplate = function (parameters) {
 	};
 
 	return self;
-};
-
-const FlowAdjunct = function (parameters) {
-	// A FlowAdjunct is an entity that can respond to events (such as clicking, or receiving a drop). It is usually attached to a FlowGrid, but can stand alone.
-	let self = {};
-	// Initialise the properties
-	self.size = {
-		width: parameters.size.width,
-		height: parameters.size.height
-	};
-	self.data = parameters.data;
-	self.listeners = {};
-	if (parameters.hasOwnProperty("listeners")) {
-		self.listeners = parameters.listeners;
-	}
-	// Create the drawing function
-	self.draw = function (context, position) {
-		parameters.draw(context, self.data, position, self.size);
-	};
-
-	// Respondng to events
-	self.respondToEvent = function (event, host, position, size) {
-		// The listener should return true if it should absorb the event (so that no other listener is triggered)
-		if (self.listeners.hasOwnProperty(event)) {
-			let args = [];
-			for (let i = 4; i < arguments.length; ++ i) {
-				args.push(arguments[i]);
-			}
-			return self.listeners[event].apply(this, [self.data, host, position, size].concat(args));
-		} else {
-			return false;
-		}
-	};
-
-	return self;
-};
-
-FlowAdjunct.createRowFromTemplate = function (parameters, template, data) {
-	let adjuncts = [];
-	for (let index = 0, adjunct, width = 0; index < parameters.columns; ++ index) {
-		adjunct = {
-			size: {
-				width: template.size.width,
-				height: template.size.height
-			},
-			data: {
-				index: index,
-				defaults: parameters.data
-			}
-		};
-		if (parameters.adjunct.hasOwnProperty("listeners")) {
-			adjunct.listeners = parameters.adjuncts.listeners;
-		}
-		if (typeof data !== "undefined") {
-			adjunct.data.individual = data[index];
-		} else {
-			adjunct.data.individual = {};
-		}
-		for (let property in parameters.adjunct.data) {
-			if (!adjunct.data.individual.hasOwnProperty(property)) {
-				adjunct.data.individual[property] = parameters.adjunct.data[property];
-			}
-		}
-		adjuncts.push({
-			adjunct: FlowAdjunct(adjunct),
-			position: {
-				x: parameters.position.x + width,
-				y: parameters.position.y
-			}
-		});
-		width += parameters.adjunct.size.width;
-	}
-	return adjuncts;
 };
 
 // Useful Drawing Functions
