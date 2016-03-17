@@ -20,19 +20,20 @@
 	</head>
 	<body>
 		<script>
+			"use strict";
 			// Arrays which store the actual items — these will be manipulated by the FlowGrid
-			var itemsX = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
-			var itemsY = ["a", "b", "c"];
+			let itemsX = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
+			let itemsY = ["a", "b", "c"];
 			// Bag
-			var item = FlowCellTemplate({
-				size : {
-					width : 64,
-					height : 64
+			let itemA = FlowCellTemplate({
+				size: {
+					width: 64,
+					height: 64
 				},
-				interacts : [],
-				draw : function (context, data, position, size, states) {
-					var lightness = 25;
-					for (var i = 0; i < states.length; ++ i) {
+				interacts: [],
+				draw: function (context, data, position, size, states) {
+					let lightness = 25;
+					for (let i = 0; i < states.length; ++ i) {
 						switch (states[i]) {
 							case "drag":
 								lightness += 25;
@@ -55,107 +56,79 @@
 					context.fillTextHD(data, (position.x + size.width / 2), (position.y + size.height / 2));
 				}
 			});
-			var bagX = FlowGrid({
-				template : item,
-				datasource : itemsX,
-				rows : 5,
-				columns : 5,
-				contrainToBounds : false,
-				selection : "multiple",
-				margin : {
-					x : 8,
-					y : 8
+			let itemB = FlowCellTemplate({
+				size: {
+					width: 64,
+					height: 64
 				},
-				spacing : {
-					x : 8,
-					y : 8
+				interacts: [{
+					template: itemA,
+					cardinality: "single"
+				}],
+				draw: function (context, data, position, size, states) {
+					let lightness = 25;
+					for (let i = 0; i < states.length; ++ i) {
+						switch (states[i]) {
+							case "drag":
+								lightness += 25;
+								break;
+							case "select":
+							case "interact":
+								lightness += 15;
+								break;
+							case "hover":
+								lightness += 5;
+								break;
+						}
+					}
+					context.fillStyle = "hsl(0, 100%, " + lightness + "%)";
+					context.fillRoundedRectHD(Math.round(position.x), Math.round(position.y), size.width, size.height, 4);
+					context.fillStyle = "white";
+					context.textAlign = "center";
+					context.textBaseline = "middle";
+					context.setFontHD("Helvetica", 20);
+					context.fillTextHD(data, (position.x + size.width / 2), (position.y + size.height / 2));
+				}
+			});
+			let bagX = FlowGrid({
+				template: itemA,
+				datasource: itemsX,
+				rows: 5,
+				columns: 5,
+				contrainToBounds: false,
+				selection: "multiple",
+				margin: {
+					x: 8,
+					y: 8
 				},
-				draw : function (context, size, region) {
+				spacing: {
+					x: 8,
+					y: 8
+				},
+				draw: function (context, size, region) {
 					context.fillStyle = "hsl(0, 0%, 10%)";
 					context.fillRectHD(region.origin.x, region.origin.y, region.size.width, region.size.height);
 				}
 			});
-			var tabs1 = FlowAdjunct({
-				data : {
-					active : true
-				},
-				size : {
-					width : 64,
-					height : 24
-				},
-				listeners : {
-					click : function (data, host, position, size, pointer) {
-						if (pointer.x - position.x >= 0 && pointer.y - position.y >= 0 && pointer.x - position.x < size.width && pointer.y - position.y < size.height) {
-							data.active = !data.active;
-							return true;
-						} else {
-							return false;
-						}
+			let bagY = FlowGrid({
+				template: itemB,
+				datasource: itemsY,
+				rows: 5,
+				columns: 5,
+				contrainToBounds: true,
+				selection: "none",
+				margin: 8,
+				listeners: {
+					"cell:interact" () {
+						return true;
 					}
 				},
-				draw : function (context, data, position, size) {
-					if (data.active) {
-						context.fillStyle = "hsl(100, 50%, 50%)";
-					} else {
-						context.fillStyle = "hsl(0, 50%, 50%)";
-					}
-					context.fillRectHD(position.x, position.y, size.width, size.height);
-				}
-			});
-			var tabs2 = FlowAdjunct({
-				data : {
-					active : true
-				},
-				size : {
-					width : 64,
-					height : 24
-				},
-				listeners : {
-					click : function (data, host, position, size, pointer) {
-						if (pointer.x - position.x >= 0 && pointer.y - position.y >= 0 && pointer.x - position.x < size.width && pointer.y - position.y < size.height) {
-							data.active = !data.active;
-							return true;
-						} else {
-							return false;
-						}
-					}
-				},
-				draw : function (context, data, position, size) {
-					if (data.active) {
-						context.fillStyle = "hsl(200, 50%, 50%)";
-					} else {
-						context.fillStyle = "hsl(0, 50%, 50%)";
-					}
-					context.fillRectHD(position.x, position.y, size.width, size.height);
-				}
-			});
-			var tabs = FlowAdjunct.fromAdjuncts([{
-					adjunct : tabs1,
-					position : { x : 0, y : 0 }
-				}, {
-					adjunct : tabs2,
-					position : { x : tabs1.size.width, y : 0 }
-				}
-			]);
-			var bagY = FlowGrid({
-				template : item,
-				datasource : itemsY,
-				rows : 5,
-				columns : 5,
-				contrainToBounds : true,
-				selection : "none",
-				margin : {
-					x : 8,
-					y : 8,
-					top : tabs.size.height + 2 * 8
-				},
-				spacing : 8,
-				draw : function (context, size, region) {
+				spacing: 8,
+				draw: function (context, size, region) {
 					context.fillStyle = "hsl(0, 0%, 10%)";
 					context.fillRectHD(region.origin.x, region.origin.y, region.size.width, region.size.height);
 				}
 			});
-			bagY.attachAdjunct(tabs, { x : 8, y : 8 });
 			window.addEventListener("DOMContentLoaded", function () {
 				document.body.appendChild(bagX.canvas);
 				document.body.appendChild(bagY.canvas);
